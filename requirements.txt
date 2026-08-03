@@ -1,2 +1,45 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cookoo Bot — Python dependencies
+# Pinned for deterministic builds on Railway (Python 3.12).
+#
+# Direct dependencies are listed first, followed by their required
+# transitive dependencies.  Versions are taken from the aiogram 3.13.1
+# PyPI metadata (requires_dist) so Railway installs exactly the same
+# package tree in every deployment.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Direct dependencies ───────────────────────────────────────────────────────
 aiogram==3.13.1
 python-dotenv==1.0.1
+
+# ── Transitive dependencies of aiogram 3.13.1 ─────────────────────────────────
+# Source: https://pypi.org/pypi/aiogram/3.13.1/json (requires_dist)
+
+# HTTP client used internally by aiogram for all Telegram API calls
+aiohttp==3.10.11
+
+# File I/O helpers used by aiogram
+aiofiles==23.2.1
+
+# SSL certificate bundle (required by aiohttp for HTTPS)
+certifi==2024.8.30
+
+# aiogram's declarative filter system (F.text == "hello" syntax)
+magic-filter==1.0.12
+
+# Data validation and settings management
+pydantic==2.9.2
+
+# Pydantic's high-performance Rust core
+pydantic-core==2.23.4
+
+# Type annotation back-ports and extras
+typing-extensions==4.12.2
+annotated-types==0.7.0
+
+# aiohttp's internal dependencies
+aiosignal==1.3.1
+attrs==24.2.0
+frozenlist==1.4.1
+multidict==6.1.0
+yarl==1.15.2

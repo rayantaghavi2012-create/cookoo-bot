@@ -8,11 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system deps required by asyncpg
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+# No system-level C deps needed for aiogram + python-dotenv
+# (asyncpg / libpq-dev will be added when PostgreSQL is introduced)
 
 # ── Stage 2: dependencies ─────────────────────────────────────────────────────
 FROM base AS deps
@@ -29,5 +26,5 @@ COPY . .
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
 
-# Run Alembic migrations then start the bot
-CMD ["sh", "-c", "alembic upgrade head && python -m src.main"]
+# Entry point: run the bot directly from the project root
+CMD ["python", "main.py"]

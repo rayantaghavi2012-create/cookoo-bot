@@ -1,0 +1,22 @@
+# railway.toml
+# ─────────────────────────────────────────────────────────────────────────────
+# Railway deployment configuration for Cookoo Telegram Cooking Bot.
+# Docs: https://docs.railway.app/reference/config-as-code
+# ─────────────────────────────────────────────────────────────────────────────
+
+[build]
+# Use Nixpacks (Railway's default builder).
+# It detects Python via .python-version and installs requirements.txt
+# automatically — no Dockerfile needed unless you want full Docker control.
+builder = "NIXPACKS"
+
+# Explicitly tell Nixpacks which file to install from
+nixpacksPlan = ""
+
+[deploy]
+# The command Railway runs to start the bot after a successful build.
+startCommand = "python main.py"
+
+# Restart the bot automatically if it crashes
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
