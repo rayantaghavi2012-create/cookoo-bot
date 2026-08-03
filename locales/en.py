@@ -8,9 +8,9 @@ Keys are snake_case identifiers shared between locales.
 STRINGS: dict[str, str] = {
 
     # ── Language selection ────────────────────────────────────────────────────
-    "choose_language":      "🌐 <b>Welcome!</b>\n\nPlease choose your language:",
-    "lang_btn_en":          "🇺🇸 English",
-    "lang_btn_fa":          "🇮🇷 فارسی",
+    "choose_language":      "🌐 <b>Welcome! / خوش آمدید!</b>\n\n"
+                            "Please choose your language:\n"
+                            "لطفاً زبان خود را انتخاب کنید:",
     "language_set":         "🇺🇸 Language set to English!",
 
     # ── Welcome / home ────────────────────────────────────────────────────────
@@ -87,7 +87,6 @@ STRINGS: dict[str, str] = {
     "btn_search_again":     "🔍 Search Again",
 
     # ── Favorites ─────────────────────────────────────────────────────────────
-    "favorites_title":      "❤️ <b>Your Favorites</b>",
     "favorites_count":      "❤️ <b>Your Favorites</b>  ({count} saved)\n\nTap a recipe to view it:",
     "favorites_empty":      "❤️ <b>Your Favorites</b>\n\n"
                             "You haven't saved any recipes yet.\n"

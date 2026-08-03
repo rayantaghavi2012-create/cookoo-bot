@@ -114,7 +114,10 @@ async def cb_recipe_detail(callback: CallbackQuery) -> None:
 async def cb_cooking_step(callback: CallbackQuery) -> None:
     parts     = callback.data.split(":")
     recipe_id = parts[1]
-    step      = int(parts[2])
+    try:
+        step = int(parts[2])
+    except (IndexError, ValueError):
+        step = 0
     lang      = get_user_lang(callback.from_user.id)
     recipe    = get_recipe_by_id(recipe_id)
 

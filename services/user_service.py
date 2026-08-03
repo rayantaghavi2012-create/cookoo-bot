@@ -3,10 +3,11 @@ services/user_service.py
 ------------------------
 Per-user settings management backed by data/users.json.
 
-Currently stores language preference only.  Extend the user dict
-when new per-user settings are needed.
+An in-memory cache avoids reading the JSON file on every single
+Telegram update. The cache is updated on every write so it stays
+consistent for the lifetime of the process.
 
-Storage schema:
+Storage schema (users.json):
   {
     "<telegram_user_id>": {
       "lang": "en" | "fa",
@@ -21,12 +22,22 @@ from utils.json_storage import read_json, write_json
 
 DEFAULT_LANG = "en"
 
+# In-memory cache — populated lazily on first read, updated on every write.
+_cache: dict | None = None
+
 
 def _load() -> dict:
-    return read_json(config.USERS_FILE)
+    global _cache
+    if _cache is None:
+        _cache = read_json(config.USERS_FILE)
+        if not isinstance(_cache, dict):
+            _cache = {}
+    return _cache
 
 
 def _save(data: dict) -> None:
+    global _cache
+    _cache = data
     write_json(config.USERS_FILE, data)
 
 
@@ -41,6 +52,7 @@ def get_user_lang(user_id: int) -> str:
     Return the saved language code for this user.
 
     Returns DEFAULT_LANG ('en') if the user has never set a language.
+    Hot-path: served from in-memory cache, no disk I/O.
     """
     data = _load()
     user = data.get(_key(user_id), {})
@@ -59,12 +71,12 @@ def has_selected_language(user_id: int) -> bool:
 
 def set_user_lang(user_id: int, lang: str, first_name: str = "") -> None:
     """
-    Persist the user's language choice.
+    Persist the user's language choice to disk and update the cache.
 
     Args:
         user_id:    Telegram user ID.
         lang:       'en' or 'fa'.
-        first_name: Optional display name — stored for future use.
+        first_name: Optional display name — stored for diagnostics.
     """
     data = _load()
     key  = _key(user_id)

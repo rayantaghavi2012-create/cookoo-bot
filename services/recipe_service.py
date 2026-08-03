@@ -61,12 +61,12 @@ def get_recipes_by_category(cuisine: str, diet: str) -> list[dict]:
     ]
 
 
-def get_popular_recipes(limit: int = 4) -> list[dict]:
+def get_popular_recipes(limit: int = 6) -> list[dict]:
     """
-    Return a curated list of popular recipes.
+    Return a curated selection of popular recipes spread across all cuisines.
 
-    For now this returns the first *limit* recipes from each cuisine
-    as a simple stand-in.  Replace with view-count logic later.
+    Uses round-robin across the three cuisines so Iranian, Italian, and
+    Fast Food are all represented — even when limit is small.
 
     Args:
         limit: Maximum number of recipes to return.
@@ -75,18 +75,31 @@ def get_popular_recipes(limit: int = 4) -> list[dict]:
         List of recipe dicts.
     """
     all_recipes = _load_all()
-    # Simple heuristic: pick one from each category until we hit the limit
-    seen_ids: set[str] = set()
-    result: list[dict] = []
+    cuisines    = ("iranian", "italian", "fastfood")
 
-    # Two passes — iranian first, then fastfood — for variety
-    for cuisine in ("iranian", "fastfood"):
-        for recipe in all_recipes:
-            if recipe["category"] == cuisine and recipe["id"] not in seen_ids:
-                result.append(recipe)
-                seen_ids.add(recipe["id"])
-                if len(result) >= limit:
-                    return result
+    # Bucket recipes by cuisine first
+    buckets: dict[str, list[dict]] = {c: [] for c in cuisines}
+    for recipe in all_recipes:
+        cat = recipe.get("category", "")
+        if cat in buckets:
+            buckets[cat].append(recipe)
+
+    # Round-robin: take one from each cuisine in turns until limit reached
+    result: list[dict] = []
+    indices = {c: 0 for c in cuisines}
+
+    while len(result) < limit:
+        added_any = False
+        for cuisine in cuisines:
+            if len(result) >= limit:
+                break
+            idx = indices[cuisine]
+            if idx < len(buckets[cuisine]):
+                result.append(buckets[cuisine][idx])
+                indices[cuisine] = idx + 1
+                added_any = True
+        if not added_any:
+            break  # All buckets exhausted
 
     return result
 

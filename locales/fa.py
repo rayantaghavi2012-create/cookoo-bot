@@ -8,9 +8,9 @@ Keys must match locales/en.py exactly.
 STRINGS: dict[str, str] = {
 
     # ── Language selection ────────────────────────────────────────────────────
-    "choose_language":      "🌐 <b>خوش آمدید!</b>\n\nلطفاً زبان خود را انتخاب کنید:",
-    "lang_btn_en":          "🇺🇸 English",
-    "lang_btn_fa":          "🇮🇷 فارسی",
+    "choose_language":      "🌐 <b>Welcome! / خوش آمدید!</b>\n\n"
+                            "Please choose your language:\n"
+                            "لطفاً زبان خود را انتخاب کنید:",
     "language_set":         "🇮🇷 زبان فارسی انتخاب شد!",
 
     # ── Welcome / home ────────────────────────────────────────────────────────
@@ -87,7 +87,6 @@ STRINGS: dict[str, str] = {
     "btn_search_again":     "🔍 جستجوی دوباره",
 
     # ── Favorites ─────────────────────────────────────────────────────────────
-    "favorites_title":      "❤️ <b>علاقه‌مندی‌های شما</b>",
     "favorites_count":      "❤️ <b>علاقه‌مندی‌های شما</b>  ({count} ذخیره شده)\n\nروی یک دستور ضربه بزنید:",
     "favorites_empty":      "❤️ <b>علاقه‌مندی‌های شما</b>\n\n"
                             "هنوز هیچ دستوری ذخیره نکرده‌اید.\n"

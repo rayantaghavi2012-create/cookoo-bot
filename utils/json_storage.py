@@ -42,7 +42,9 @@ def write_json(filepath: str, data: Any) -> None:
         filepath: Absolute or relative path to the target JSON file.
         data:     Any JSON-serialisable Python object.
     """
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    parent = os.path.dirname(filepath)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
 
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
