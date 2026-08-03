@@ -6,12 +6,9 @@
 
 [build]
 # Use Nixpacks (Railway's default builder).
-# It detects Python via .python-version and installs requirements.txt
-# automatically — no Dockerfile needed unless you want full Docker control.
+# Nixpacks auto-detects Python via .python-version and installs
+# dependencies from requirements.txt — no manual plan needed.
 builder = "NIXPACKS"
-
-# Explicitly tell Nixpacks which file to install from
-nixpacksPlan = ""
 
 [deploy]
 # The command Railway runs to start the bot after a successful build.
