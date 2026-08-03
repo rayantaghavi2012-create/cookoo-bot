@@ -52,3 +52,7 @@ RECIPES_FILE: str = os.path.join(DATA_DIR, "recipes.json")
 # filesystem this file resets on each redeploy.  Favourites saved by
 # users will persist for the lifetime of the running container only.
 FAVORITES_FILE: str = os.path.join(DATA_DIR, "favorites.json")
+
+# Per-user settings (language preference, etc.)
+# Same ephemeral-filesystem caveat as favorites.json on Railway.
+USERS_FILE: str = os.path.join(DATA_DIR, "users.json")

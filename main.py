@@ -3,7 +3,7 @@ main.py
 -------
 Entry point for the Cookoo Telegram Cooking Bot.
 
-Registers all routers, sets the bot commands menu, and starts
+Registers all routers, sets the bot command menu, and starts
 long-polling. All configuration is loaded from the .env file.
 """
 
@@ -37,13 +37,13 @@ logger = logging.getLogger(__name__)
 
 
 async def set_bot_commands(bot: Bot) -> None:
-    """Register the visible command menu shown in the Telegram client."""
+    """Register the visible command list shown in the Telegram client."""
     commands = [
-        BotCommand(command="start", description="🏠 Main menu"),
-        BotCommand(command="search", description="🔍 Search recipes"),
+        BotCommand(command="start",     description="🏠 Main menu / Language selection"),
+        BotCommand(command="search",    description="🔍 Search recipes"),
         BotCommand(command="favorites", description="❤️ My favorites"),
-        BotCommand(command="random", description="🎲 Random recipe"),
-        BotCommand(command="guide", description="📖 Cooking guide"),
+        BotCommand(command="random",    description="🎲 Random recipe"),
+        BotCommand(command="guide",     description="📖 Cooking guide"),
     ]
     await bot.set_my_commands(commands)
 
@@ -56,17 +56,19 @@ async def main() -> None:
         token=config.BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    # MemoryStorage is fine for FSM while we don't have Redis yet.
+    # MemoryStorage handles FSM (search state, etc.)
     dp = Dispatcher(storage=MemoryStorage())
 
-    # ── Register routers (order matters for overlapping filters) ──────────────
-    dp.include_router(start.router)
-    dp.include_router(cooking.router)
-    dp.include_router(search.router)
-    dp.include_router(favorites.router)
-    dp.include_router(random_recipe.router)
-    dp.include_router(guide.router)
-    dp.include_router(settings.router)
+    # ── Register routers ──────────────────────────────────────────────────────
+    # Order matters: start.py owns setlang: and menu:home callbacks — it must
+    # be registered before any handler that also listens to overlapping prefixes.
+    dp.include_router(start.router)       # /start, setlang:, menu:home, menu:popular
+    dp.include_router(cooking.router)     # menu:cooking, cuisine:, diet:, recipe:, cook:, fav_toggle:
+    dp.include_router(search.router)      # /search, menu:search, FSM query handler
+    dp.include_router(favorites.router)   # /favorites, menu:favorites, fav_remove:
+    dp.include_router(random_recipe.router)  # /random, menu:random
+    dp.include_router(guide.router)       # /guide, menu:guide, guide:
+    dp.include_router(settings.router)    # menu:settings, settings:, notif:
 
     # ── Bot command menu ──────────────────────────────────────────────────────
     await set_bot_commands(bot)

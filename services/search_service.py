@@ -1,16 +1,15 @@
 """
 services/search_service.py
 --------------------------
-Full-text recipe search over the in-memory catalogue.
+Bilingual full-text recipe search.
 
-Matching strategy (case-insensitive, partial):
-  - Recipe title
-  - Category / sub-category labels
-  - Ingredient names
+Searches across English AND Persian fields simultaneously, so a user
+typing either language will find the correct recipe.
 
-This is intentionally simple.  When PostgreSQL is introduced, replace
-the body of `search_recipes` with a parameterised SQL ILIKE query —
-the handler won't need to change at all.
+Matching strategy (case-insensitive, partial match):
+  - title_en, title_fa
+  - ingredients_en (joined), ingredients_fa (joined)
+  - category, subcategory
 """
 
 from services.recipe_service import get_all_recipes
@@ -18,31 +17,31 @@ from services.recipe_service import get_all_recipes
 
 def search_recipes(query: str) -> list[dict]:
     """
-    Search the recipe catalogue for *query*.
+    Search the recipe catalogue for *query* in both languages.
 
     Args:
-        query: Raw text typed by the user.  Leading/trailing whitespace
-               is stripped and the comparison is case-insensitive.
+        query: Raw text from the user (any language).
 
     Returns:
-        List of matching recipe dicts, ordered as they appear in the
-        catalogue.  Empty list if nothing matches or query is blank.
+        List of matching recipe dicts, preserving catalogue order.
+        Empty list if query is blank or nothing matches.
     """
     query = query.strip().lower()
-
     if not query:
         return []
 
     results: list[dict] = []
 
     for recipe in get_all_recipes():
-        # Build a single searchable blob for this recipe
-        searchable = " ".join([
-            recipe.get("title", ""),
+        # Build one searchable blob from all text fields in both languages
+        searchable = " ".join(filter(None, [
+            recipe.get("title_en", ""),
+            recipe.get("title_fa", ""),
             recipe.get("category", ""),
             recipe.get("subcategory", ""),
-            " ".join(recipe.get("ingredients", [])),
-        ]).lower()
+            " ".join(recipe.get("ingredients_en", [])),
+            " ".join(recipe.get("ingredients_fa", [])),
+        ])).lower()
 
         if query in searchable:
             results.append(recipe)

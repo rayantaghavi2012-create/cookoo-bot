@@ -2,34 +2,61 @@
 handlers/start.py
 -----------------
 Handles:
-  - /start command  → welcome message + main menu
-  - menu:home       → return to main menu from anywhere
-  - menu:popular    → popular recipes list
+  /start         → language gate (first time) or main menu (returning user)
+  setlang:<code> → save language choice, show main menu
+  menu:home      → return to main menu in the user's language
+  menu:popular   → popular recipes list
 """
 
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from keyboards.main_menu import main_menu_kb
-from keyboards.recipe_kb import recipe_list_kb
+from keyboards.main_menu import language_select_kb, main_menu_kb
+from services.user_service import get_user_lang, has_selected_language, set_user_lang
 from services.recipe_service import get_popular_recipes
+from utils.formatters import get_recipe_title
+from locales import t
 
 router = Router()
 
 
-# ── /start ────────────────────────────────────────────────────────────────────
+# ── /start ─────────────────────────────────────────────────────────────────────
 
 @router.message(CommandStart())
 async def cmd_start(message: Message) -> None:
-    """Greet the user and show the main menu."""
-    first_name = message.from_user.first_name or "Chef"
-    await message.answer(
-        f"👨‍🍳 Welcome to <b>Cookoo Cooking Bot</b>, {first_name}!\n\n"
-        "Discover recipes, follow step-by-step cooking guides, "
-        "save your favourites, and more.\n\n"
-        "What would you like to do?",
-        reply_markup=main_menu_kb(),
+    user_id    = message.from_user.id
+    first_name = message.from_user.first_name or ""
+
+    if not has_selected_language(user_id):
+        # First visit — show language selection screen
+        await message.answer(
+            t("choose_language", "en"),   # bilingual prompt, always in EN
+            reply_markup=language_select_kb(),
+        )
+    else:
+        lang = get_user_lang(user_id)
+        await message.answer(
+            t("welcome", lang).format(name=first_name),
+            reply_markup=main_menu_kb(lang),
+        )
+
+
+# ── Language selection (from /start gate OR settings) ─────────────────────────
+
+@router.callback_query(lambda c: c.data and c.data.startswith("setlang:"))
+async def cb_set_language(callback: CallbackQuery) -> None:
+    lang       = callback.data.split(":")[1]   # 'en' or 'fa'
+    user_id    = callback.from_user.id
+    first_name = callback.from_user.first_name or ""
+
+    set_user_lang(user_id, lang, first_name)
+
+    await callback.answer(t("language_set", lang), show_alert=False)
+    await callback.message.edit_text(
+        t("welcome", lang).format(name=first_name),
+        reply_markup=main_menu_kb(lang),
     )
 
 
@@ -37,10 +64,10 @@ async def cmd_start(message: Message) -> None:
 
 @router.callback_query(lambda c: c.data == "menu:home")
 async def cb_home(callback: CallbackQuery) -> None:
-    """Edit the current message back to the main menu."""
+    lang = get_user_lang(callback.from_user.id)
     await callback.message.edit_text(
-        "🏠 <b>Main Menu</b>\n\nWhat would you like to do?",
-        reply_markup=main_menu_kb(),
+        t("main_menu_title", lang),
+        reply_markup=main_menu_kb(lang),
     )
     await callback.answer()
 
@@ -49,32 +76,25 @@ async def cb_home(callback: CallbackQuery) -> None:
 
 @router.callback_query(lambda c: c.data == "menu:popular")
 async def cb_popular(callback: CallbackQuery) -> None:
-    """Show a hand-picked selection of popular recipes."""
-    recipes = get_popular_recipes(limit=4)
+    lang    = get_user_lang(callback.from_user.id)
+    recipes = get_popular_recipes(limit=6)
 
     if not recipes:
-        await callback.answer("No recipes available yet.", show_alert=True)
+        await callback.answer(t("popular_empty", lang), show_alert=True)
         return
-
-    # Build the keyboard — no specific cuisine/diet back-navigation needed here
-    # so we reuse recipe_list_kb with a generic back target that goes home
-    from aiogram.utils.keyboard import InlineKeyboardBuilder
-    from aiogram.types import InlineKeyboardButton
 
     builder = InlineKeyboardBuilder()
     for recipe in recipes:
         builder.row(
             InlineKeyboardButton(
-                text=f"{recipe['emoji']} {recipe['title']}",
+                text=f"{recipe['emoji']} {get_recipe_title(recipe, lang)}",
                 callback_data=f"recipe:{recipe['id']}",
             )
         )
-    builder.row(
-        InlineKeyboardButton(text="🏠 Home", callback_data="menu:home")
-    )
+    builder.row(InlineKeyboardButton(text=t("btn_home", lang), callback_data="menu:home"))
 
     await callback.message.edit_text(
-        "⭐ <b>Popular Recipes</b>\n\nHere are some crowd favourites:",
+        t("popular_title", lang),
         reply_markup=builder.as_markup(),
     )
     await callback.answer()

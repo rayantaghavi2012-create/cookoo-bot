@@ -1,164 +1,140 @@
 """
 keyboards/recipe_kb.py
 -----------------------
-All keyboards related to recipe browsing:
-  - cuisine category picker  (Iranian / Fast Food)
-  - diet sub-category picker (Vegetarian / Non-Vegetarian)
-  - recipe list
-  - recipe detail actions
-  - step-by-step navigation
+All keyboards for recipe browsing, detail view, and step-by-step cooking.
+Every function accepts a `lang` parameter so labels are always localized.
 """
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from locales import t
+from utils.formatters import get_recipe_title
 
 
-# ── Category & sub-category ───────────────────────────────────────────────────
+# ── Category pickers ──────────────────────────────────────────────────────────
 
-def cuisine_category_kb() -> InlineKeyboardMarkup:
-    """Top-level cuisine picker: Iranian Food or Fast Food."""
+def cuisine_category_kb(lang: str = "en") -> InlineKeyboardMarkup:
+    """Top-level cuisine picker: Iranian / Italian / Fast Food."""
     builder = InlineKeyboardBuilder()
     builder.row(
-        InlineKeyboardButton(text="🇮🇷 Iranian Food", callback_data="cuisine:iranian"),
-        InlineKeyboardButton(text="🍔 Fast Food",      callback_data="cuisine:fastfood"),
+        InlineKeyboardButton(text=t("btn_iranian",  lang), callback_data="cuisine:iranian"),
+        InlineKeyboardButton(text=t("btn_italian",  lang), callback_data="cuisine:italian"),
     )
     builder.row(
-        InlineKeyboardButton(text="🏠 Home", callback_data="menu:home"),
+        InlineKeyboardButton(text=t("btn_fastfood", lang), callback_data="cuisine:fastfood"),
+    )
+    builder.row(
+        InlineKeyboardButton(text=t("btn_home", lang), callback_data="menu:home"),
     )
     return builder.as_markup()
 
 
-def diet_category_kb(cuisine: str) -> InlineKeyboardMarkup:
-    """
-    Diet filter for a given cuisine.
-
-    Args:
-        cuisine: 'iranian' or 'fastfood' — embedded in callback_data
-                 so the handler knows where to route back.
-    """
-    # Emoji differs slightly between cuisines for personality
-    veg_emoji   = "🌱"
-    meat_emoji  = "🍖" if cuisine == "iranian" else "🍗"
-
+def diet_category_kb(cuisine: str, lang: str = "en") -> InlineKeyboardMarkup:
+    """Vegetarian / Non-Vegetarian picker for a given cuisine."""
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text=f"{veg_emoji} Vegetarian",
+            text=t("btn_vegetarian",     lang),
             callback_data=f"diet:{cuisine}:vegetarian",
         ),
         InlineKeyboardButton(
-            text=f"{meat_emoji} Non-Vegetarian",
+            text=t("btn_non_vegetarian", lang),
             callback_data=f"diet:{cuisine}:non_vegetarian",
         ),
     )
     builder.row(
-        InlineKeyboardButton(text="◀️ Back", callback_data="menu:cooking"),
-        InlineKeyboardButton(text="🏠 Home",  callback_data="menu:home"),
+        InlineKeyboardButton(text=t("btn_back", lang), callback_data="menu:cooking"),
+        InlineKeyboardButton(text=t("btn_home", lang), callback_data="menu:home"),
     )
     return builder.as_markup()
 
 
 # ── Recipe list ───────────────────────────────────────────────────────────────
 
-def recipe_list_kb(recipes: list[dict], cuisine: str, diet: str) -> InlineKeyboardMarkup:
-    """
-    Show one button per recipe, then Back and Home.
-
-    Args:
-        recipes:  list of recipe dicts from recipes.json.
-        cuisine:  used to build the back callback.
-        diet:     used to build the back callback.
-    """
+def recipe_list_kb(
+    recipes: list[dict],
+    cuisine: str,
+    diet: str,
+    lang: str = "en",
+) -> InlineKeyboardMarkup:
+    """One button per recipe plus Back / Home."""
     builder = InlineKeyboardBuilder()
-
     for recipe in recipes:
         builder.row(
             InlineKeyboardButton(
-                text=f"{recipe['emoji']} {recipe['title']}",
+                text=f"{recipe['emoji']} {get_recipe_title(recipe, lang)}",
                 callback_data=f"recipe:{recipe['id']}",
             )
         )
-
     builder.row(
         InlineKeyboardButton(
-            text="◀️ Back",
+            text=t("btn_back", lang),
             callback_data=f"cuisine:{cuisine}",
         ),
-        InlineKeyboardButton(text="🏠 Home", callback_data="menu:home"),
+        InlineKeyboardButton(text=t("btn_home", lang), callback_data="menu:home"),
     )
     return builder.as_markup()
 
 
 # ── Recipe detail ─────────────────────────────────────────────────────────────
 
-def recipe_detail_kb(recipe_id: str, is_favorite: bool) -> InlineKeyboardMarkup:
-    """
-    Actions shown below a full recipe card.
-
-    Args:
-        recipe_id:   used to build callback strings.
-        is_favorite: toggles the heart button label.
-    """
-    fav_text = "💔 Remove Favorite" if is_favorite else "❤️ Add to Favorites"
-
+def recipe_detail_kb(
+    recipe_id: str,
+    is_favorite: bool,
+    lang: str = "en",
+) -> InlineKeyboardMarkup:
+    """Start Cooking + Favorite toggle + Home."""
+    fav_key = "btn_remove_favorite" if is_favorite else "btn_add_favorite"
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(
-            text="👨‍🍳 Start Cooking",
-            callback_data=f"cook:{recipe_id}:0",   # step index = 0
+            text=t("btn_start_cooking", lang),
+            callback_data=f"cook:{recipe_id}:0",
         ),
     )
     builder.row(
         InlineKeyboardButton(
-            text=fav_text,
+            text=t(fav_key, lang),
             callback_data=f"fav_toggle:{recipe_id}",
         ),
     )
     builder.row(
-        InlineKeyboardButton(text="🏠 Home", callback_data="menu:home"),
+        InlineKeyboardButton(text=t("btn_home", lang), callback_data="menu:home"),
     )
     return builder.as_markup()
 
 
 # ── Step-by-step navigation ────────────────────────────────────────────────────
 
-def cooking_steps_kb(recipe_id: str, step: int, total: int) -> InlineKeyboardMarkup:
-    """
-    Prev / Next / Home navigation for step-by-step cooking mode.
+def cooking_steps_kb(
+    recipe_id: str,
+    step: int,
+    total: int,
+    lang: str = "en",
+) -> InlineKeyboardMarkup:
+    """Previous / Next / View Recipe / Home for step-by-step cooking."""
+    builder  = InlineKeyboardBuilder()
+    nav_btns: list[InlineKeyboardButton] = []
 
-    Args:
-        recipe_id: identifies which recipe is being cooked.
-        step:      0-based current step index.
-        total:     total number of steps in the recipe.
-    """
-    builder = InlineKeyboardBuilder()
-
-    buttons: list[InlineKeyboardButton] = []
-
-    # Previous — only if not on the first step
     if step > 0:
-        buttons.append(
-            InlineKeyboardButton(
-                text="◀️ Previous",
-                callback_data=f"cook:{recipe_id}:{step - 1}",
-            )
-        )
-
-    # Next — only if not on the last step
+        nav_btns.append(InlineKeyboardButton(
+            text=t("btn_previous", lang),
+            callback_data=f"cook:{recipe_id}:{step - 1}",
+        ))
     if step < total - 1:
-        buttons.append(
-            InlineKeyboardButton(
-                text="Next ▶️",
-                callback_data=f"cook:{recipe_id}:{step + 1}",
-            )
-        )
+        nav_btns.append(InlineKeyboardButton(
+            text=t("btn_next", lang),
+            callback_data=f"cook:{recipe_id}:{step + 1}",
+        ))
 
-    builder.row(*buttons)
+    if nav_btns:
+        builder.row(*nav_btns)
+
     builder.row(
         InlineKeyboardButton(
-            text="📋 View Recipe",
+            text=t("btn_view_recipe", lang),
             callback_data=f"recipe:{recipe_id}",
         ),
-        InlineKeyboardButton(text="🏠 Home", callback_data="menu:home"),
+        InlineKeyboardButton(text=t("btn_home", lang), callback_data="menu:home"),
     )
     return builder.as_markup()
