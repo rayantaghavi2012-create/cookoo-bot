@@ -8,7 +8,11 @@ Handles:
   menu:popular   → popular recipes list
 """
 
+import logging
+from html import escape
+
 from aiogram import Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -20,6 +24,12 @@ from utils.formatters import get_recipe_title
 from locales import t
 
 router = Router()
+logger = logging.getLogger(__name__)
+
+
+def _welcome_text(lang: str, first_name: str) -> str:
+    """Render the HTML welcome message safely for Telegram."""
+    return t("welcome", lang).format(name=escape(first_name))
 
 
 # ── /start ─────────────────────────────────────────────────────────────────────
@@ -38,7 +48,7 @@ async def cmd_start(message: Message) -> None:
     else:
         lang = get_user_lang(user_id)
         await message.answer(
-            t("welcome", lang).format(name=first_name),
+            _welcome_text(lang, first_name),
             reply_markup=main_menu_kb(lang),
         )
 
@@ -47,17 +57,31 @@ async def cmd_start(message: Message) -> None:
 
 @router.callback_query(lambda c: c.data and c.data.startswith("setlang:"))
 async def cb_set_language(callback: CallbackQuery) -> None:
-    lang       = callback.data.split(":")[1]   # 'en' or 'fa'
+    lang       = callback.data.split(":", 1)[1]   # 'en' or 'fa'
     user_id    = callback.from_user.id
     first_name = callback.from_user.first_name or ""
 
-    set_user_lang(user_id, lang, first_name)
+    if lang not in {"en", "fa"}:
+        logger.warning("Rejected unsupported language callback: user_id=%s lang=%r", user_id, lang)
+        await callback.answer()
+        return
 
-    await callback.answer(t("language_set", lang), show_alert=False)
-    await callback.message.edit_text(
-        t("welcome", lang).format(name=first_name),
-        reply_markup=main_menu_kb(lang),
-    )
+    try:
+        set_user_lang(user_id, lang, first_name)
+        saved_lang = get_user_lang(user_id)
+        welcome_text = _welcome_text(saved_lang, first_name)
+
+        await callback.message.edit_text(welcome_text, reply_markup=main_menu_kb(saved_lang))
+    except TelegramBadRequest as exc:
+        if "message is not modified" not in str(exc).lower():
+            logger.exception("Failed to update language screen: user_id=%s lang=%s", user_id, lang)
+            raise
+    except Exception:
+        logger.exception("Failed to change language: user_id=%s lang=%s", user_id, lang)
+        raise
+    finally:
+        # Always clear Telegram's callback progress indicator, even if editing fails.
+        await callback.answer(t("language_set", lang), show_alert=False)
 
 
 # ── Home (return to main menu) ─────────────────────────────────────────────────
