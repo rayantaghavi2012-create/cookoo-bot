@@ -59,7 +59,6 @@ async def cmd_start(message: Message) -> None:
 async def cb_set_language(callback: CallbackQuery) -> None:
     lang       = callback.data.split(":", 1)[1]   # 'en' or 'fa'
     user_id    = callback.from_user.id
-    first_name = callback.from_user.first_name or ""
 
     if lang not in {"en", "fa"}:
         logger.warning("Rejected unsupported language callback: user_id=%s lang=%r", user_id, lang)
@@ -67,11 +66,13 @@ async def cb_set_language(callback: CallbackQuery) -> None:
         return
 
     try:
-        set_user_lang(user_id, lang, first_name)
+        set_user_lang(user_id, lang, callback.from_user.first_name or "")
         saved_lang = get_user_lang(user_id)
-        welcome_text = _welcome_text(saved_lang, first_name)
 
-        await callback.message.edit_text(welcome_text, reply_markup=main_menu_kb(saved_lang))
+        await callback.message.edit_text(
+            t("main_menu_title", saved_lang),
+            reply_markup=main_menu_kb(saved_lang),
+        )
     except TelegramBadRequest as exc:
         if "message is not modified" not in str(exc).lower():
             logger.exception("Failed to update language screen: user_id=%s lang=%s", user_id, lang)
