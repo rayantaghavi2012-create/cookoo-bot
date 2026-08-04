@@ -12,7 +12,7 @@ import logging
 from html import escape
 
 from aiogram import Router
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -68,21 +68,32 @@ async def cb_set_language(callback: CallbackQuery) -> None:
     try:
         set_user_lang(user_id, lang, callback.from_user.first_name or "")
         saved_lang = get_user_lang(user_id)
+        menu_markup = main_menu_kb(saved_lang)
 
-        await callback.message.edit_text(
-            t("main_menu_title", saved_lang),
-            reply_markup=main_menu_kb(saved_lang),
+        logger.info(
+            "Language selected: user_id=%s lang=%s message_id=%s keyboard=%s",
+            user_id,
+            saved_lang,
+            callback.message.message_id,
+            menu_markup.inline_keyboard,
         )
-    except TelegramBadRequest as exc:
-        if "message is not modified" not in str(exc).lower():
-            logger.exception("Failed to update language screen: user_id=%s lang=%s", user_id, lang)
-            raise
+        await callback.message.answer(
+            t("main_menu_title", saved_lang),
+            reply_markup=menu_markup,
+        )
+        logger.info("Main menu sent: user_id=%s lang=%s", user_id, saved_lang)
+    except TelegramAPIError:
+        logger.exception("Telegram API failure while opening main menu: user_id=%s lang=%s", user_id, lang)
+        raise
     except Exception:
         logger.exception("Failed to change language: user_id=%s lang=%s", user_id, lang)
         raise
     finally:
-        # Always clear Telegram's callback progress indicator, even if editing fails.
-        await callback.answer(t("language_set", lang), show_alert=False)
+        # Always clear Telegram's callback progress indicator, even if sending fails.
+        try:
+            await callback.answer(t("language_set", lang), show_alert=False)
+        except TelegramAPIError:
+            logger.exception("Telegram API failure while answering callback: user_id=%s lang=%s", user_id, lang)
 
 
 # ── Home (return to main menu) ─────────────────────────────────────────────────
